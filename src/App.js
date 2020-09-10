@@ -9,14 +9,16 @@ import firebaseConfig from "./firebase.config";
 firebase.initializeApp(firebaseConfig);
 
 function App() {
+  const [newUser, setNewUser]= useState(false);
   const [user,setUser] = useState({
 
     isSignedIn:false,
+    
     name:'',
     email:'',
     pass: "",
 
-  })
+  });
   const provider = new firebase.auth.GoogleAuthProvider();
   const handleClick =()=>{
     firebase.auth().signInWithPopup(provider)
@@ -43,6 +45,8 @@ function App() {
       isSignedIn: false,
       name:"",
       email:"",
+      error:"",
+      success:false,
      
     }
     setUser(isSignOut)
@@ -53,7 +57,7 @@ function App() {
    })
   }
   const handleBlur=(event)=>{
-console.log(event.target.name,event.target.value)
+// console.log(event.target.name,event.target.value)
 let formValid= true;
 if(event.target.name==="email"){
  formValid= /\S+@\S+\.\S+/.test(event.target.value);
@@ -66,6 +70,7 @@ const passwordValue= /\d{1}/.test(event.target.value)
   formValid = isPassValid && passwordValue;
 }
 if(formValid){
+  console.log(event.target.name,event.target.value)
 const newInfo= {...user};
 newInfo[event.target.name]= event.target.value;
 setUser(newInfo)
@@ -74,11 +79,43 @@ setUser(newInfo)
 
   }
   const handleSubmit=(event)=>{
-console.log(user.email,user.pass)
-if(user.email && user.pass){
-
-console.log("submitted")
+  
+// console.log(user.email,user.pass)
+if(newUser && user.email && user.pass){
+  firebase.auth().createUserWithEmailAndPassword(user.email, user.pass)
+  .then(res=>{
+    const newUserInfo ={...user}
+    newUserInfo.error="";
+    newUserInfo.success=true;
+    setUser(newUserInfo)
+  })
+  .catch(error=> {
+   
+    const newUserInfo={...user}
+    newUserInfo.error=error.message;
+    newUserInfo.success=false;
+    setUser(newUserInfo);
+ });
 }
+  if(!newUser && user.email && user.pass){
+  firebase.auth().signInWithEmailAndPassword(user.email , user.pass)
+  .then(res=>{
+    const newUserInfo ={...user}
+    newUserInfo.error="";
+    newUserInfo.success=true;
+    setUser(newUserInfo)
+  })
+  .catch(error=> {
+    // Handle Errors here.
+    const newUserInfo={...user}
+    newUserInfo.error=error.message;
+    newUserInfo.success=false;
+    setUser(newUserInfo);
+    // ...
+  });
+}
+
+
 event.preventDefault();
   }
   return (
@@ -93,9 +130,10 @@ event.preventDefault();
         </div>
 }
        <h2> my own authentication </h2>
-       
+       <input type="checkbox" name="newUser" onChange={()=>setNewUser(!newUser)} id=""/>
+       <label htmlFor="newUser">newUser sign in</label>
        <form onSubmit={handleSubmit}>
-         <input type="text" name="name"onBlur={handleBlur} placeholder="ur name"/>
+         {newUser &&  <input type="text" name="name"onBlur={handleBlur} placeholder="ur name"/>}
          <br/>
       <input type="email" name="email" onBlur={handleBlur} id="" placeholder="write your email here" required/>
       <br/>
@@ -103,6 +141,8 @@ event.preventDefault();
         <br/>
         <input type="submit" value="submit"/>
         </form>
+        <p style={{color:"red"}}> {user.error} </p>
+        {user.success && <p style={{color:"green"}}> users {newUser ?"created" :"log in" }  successfully </p>}
 
     </div>
   );
